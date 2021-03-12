@@ -1,40 +1,14 @@
 import React, { Component } from "react";
 
-import Modal from "./components/Modal";
-
-const todoItems = [
-  {
-    id: 1,
-    title: "Go to Market",
-    description: "Buy ingredients to prepare dinner",
-    completed: true,
-  },
-  {
-    id: 2,
-    title: "Study",
-    description: "Read Algebra and History textbook for the upcoming test",
-    completed: false,
-  },
-  {
-    id: 3,
-    title: "Sammy's books",
-    description: "Go to library to return Sammy's books",
-    completed: true,
-  },
-  {
-    id: 4,
-    title: "Article",
-    description: "Write article on how to use Django with React",
-    completed: false,
-  },
-];
+import Modal from "../components/Modal";
+import axios from 'axios';
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
       viewCompleted: false,
-      todoList: todoItems,
+      todoList: [],
       modal: false,
       activeItem: {
         title: "",
@@ -44,6 +18,16 @@ class App extends Component {
     };
   }
 
+  componentDidMount() {
+    this.refreshList()
+  }
+
+  refreshList = () => {
+    axios.get(`${process.env.REACT_APP_API_ENDPOINT}/api/todos/`)
+      .then((response) => this.setState({ todoList: response.data }))
+      .catch((err) => console.log(err))
+  }
+
   toggle = () => {
     this.setState({ modal: !this.state.modal });
   };
@@ -51,11 +35,20 @@ class App extends Component {
   handleSubmit = (item) => {
     this.toggle();
 
-    alert("save" + JSON.stringify(item));
+    if (item.id) {
+      return axios
+        .put(`${process.env.REACT_APP_API_ENDPOINT}/api/todos/${item.id}/`, item)
+        .then((response) => this.refreshList());
+    }
+    axios
+      .post(`${process.env.REACT_APP_API_ENDPOINT}/api/todos/`, item)
+      .then((response) => this.refreshList());
   };
 
   handleDelete = (item) => {
-    alert("delete" + JSON.stringify(item));
+    axios
+      .delete(`${process.env.REACT_APP_API_ENDPOINT}/api/todos/${item.id}/`)
+      .then((response) => this.refreshList());
   };
 
   createItem = () => {
@@ -72,7 +65,6 @@ class App extends Component {
     if (status) {
       return this.setState({ viewCompleted: true });
     }
-
     return this.setState({ viewCompleted: false });
   };
 
@@ -109,16 +101,22 @@ class App extends Component {
           className={`todo-title mr-2 ${this.state.viewCompleted ? "completed-todo" : ""
             }`}
           title={item.description}>
-          {item.title}
+          {this.state.viewCompleted === false
+            ? (<p>{item.title}</p>)
+            : (<p><del>{item.title}</del></p>)
+          }
         </span>
         <span>
           <button
             className="btn btn-secondary mr-2"
-            onClick={() => this.handleDelete(item)}
+            onClick={() => this.editItem(item)}
           >
             Edit
           </button>
-          <button className="btn btn-danger">
+          <button
+            className="btn btn-danger"
+            onClick={() => this.handleDelete(item)}
+          >
             Delete
           </button>
         </span>
@@ -129,7 +127,7 @@ class App extends Component {
   render() {
     return (
       <main className="container">
-        <h1 className="text-uppercase text-center my-4">Todo app</h1>
+        <h1 className="text-white text-uppercase text-center my-4">To-do List</h1>
         <div className="row">
           <div className="col-md-6 col-sm-10 mx-auto p-0">
             <div className="card p-3">
@@ -148,18 +146,17 @@ class App extends Component {
             </div>
           </div>
         </div>
-        {this.state.modal
-          ? (
-            <Modal
-              activeItem={this.state.activeItem}
-              toggle={this.toggle}
-              onSave={this.handleSubmit}
-            />
-          )
-          : null}
+        {this.state.modal ? (
+          <Modal
+            activeItem={this.state.activeItem}
+            toggle={this.toggle}
+            onSave={this.handleSubmit}
+          />
+        ) : null}
       </main>
     );
   }
+
 }
 
 export default App;
